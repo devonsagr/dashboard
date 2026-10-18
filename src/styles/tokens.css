@@ -1,0 +1,93 @@
+/* 设计令牌：安静极简（暖纸底 + 陶土强调 + 衬线标题 + 等宽元信息）；底色/强调色变体在文件末尾 */
+:root {
+  --bg: #faf9f5;
+  --bg-sunk: #f5f4ee;
+  --surface: #ffffff;
+  --surface-2: #f0eee6;
+  --hover: rgba(31, 30, 29, 0.045);
+  --active: rgba(31, 30, 29, 0.075);
+  --line: rgba(31, 30, 29, 0.1);
+  --line-strong: rgba(31, 30, 29, 0.18);
+  --text: #1f1e1d;
+  --text-2: #3d3d3a;
+  --muted: #73726c;
+  --faint: #a3a19a;
+  --accent: #c96442;
+  --accent-soft: #d97757;
+  --accent-bg: rgba(217, 119, 87, 0.1);
+  --ok: #4f7d4a;
+  --ok-bg: rgba(79, 125, 74, 0.1);
+  --warn: #a8741a;
+  --warn-bg: rgba(196, 140, 40, 0.12);
+  --bad: #b24a3b;
+  --bad-bg: rgba(178, 74, 59, 0.1);
+  --info: #4a6c8c;
+  --info-bg: rgba(74, 108, 140, 0.1);
+  --ai: #7a6a9a;
+  --ai-bg: rgba(122, 106, 154, 0.09);
+  --shadow-sm: 0 1px 2px rgba(31, 30, 29, 0.04);
+  --shadow: 0 1px 2px rgba(31, 30, 29, 0.04), 0 4px 16px rgba(31, 30, 29, 0.05);
+  --shadow-lg: 0 2px 6px rgba(31, 30, 29, 0.06), 0 18px 48px rgba(31, 30, 29, 0.12);
+  --r-sm: 6px;
+  --r: 10px;
+  --r-lg: 16px;
+  --font-serif: "Tiempos Text", "Source Serif 4", "Noto Serif SC", "Songti SC", Georgia, "Times New Roman", serif;
+  --font-sans: "Styrene B", ui-sans-serif, system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, "Courier New", monospace;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --dur: 180ms;
+  --sidebar-w: 260px;
+}
+:root[data-theme="dark"] {
+  --bg: #262624;
+  --bg-sunk: #1f1e1d;
+  --surface: #30302e;
+  --surface-2: #3a3936;
+  --hover: rgba(250, 249, 245, 0.05);
+  --active: rgba(250, 249, 245, 0.09);
+  --line: rgba(250, 249, 245, 0.1);
+  --line-strong: rgba(250, 249, 245, 0.18);
+  --text: #faf9f5;
+  --text-2: #e5e3da;
+  --muted: #a6a39a;
+  --faint: #7a7870;
+  --accent: #d97757;
+  --accent-soft: #e08a6d;
+  --accent-bg: rgba(217, 119, 87, 0.16);
+  --ok: #8fbf86; --ok-bg: rgba(143, 191, 134, 0.13);
+  --warn: #e0b45c; --warn-bg: rgba(224, 180, 92, 0.13);
+  --bad: #e58a7c; --bad-bg: rgba(229, 138, 124, 0.13);
+  --info: #8fb2d4; --info-bg: rgba(143, 178, 212, 0.13);
+  --ai: #b7a6d9; --ai-bg: rgba(183, 166, 217, 0.12);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.2), 0 4px 16px rgba(0, 0, 0, 0.18);
+  --shadow-lg: 0 2px 6px rgba(0, 0, 0, 0.3), 0 18px 48px rgba(0, 0, 0, 0.4);
+}
+:root[data-density="compact"] { --row-pad: 6px; }
+:root { --row-pad: 9px; }
+@media (prefers-reduced-motion: reduce) { :root { --dur: 1ms; } }
+:root[data-motion="off"] { --dur: 1ms; }
+
+/* ───────── 底色（palette）：暖纸为默认；中性贴近 Obsidian；跟随 Obsidian 直接读它的变量 ───────── */
+:root[data-palette="neutral"] {
+  --bg: #ffffff; --bg-sunk: #f6f6f6; --surface: #ffffff; --surface-2: #f1f1f1;
+  --text: #222222; --text-2: #3a3a3a; --muted: #6b6b6b; --faint: #a0a0a0;
+  --line: rgba(0, 0, 0, 0.09); --line-strong: rgba(0, 0, 0, 0.16); --hover: rgba(0, 0, 0, 0.04); --active: rgba(0, 0, 0, 0.07);
+}
+:root[data-palette="neutral"][data-theme="dark"] {
+  --bg: #1e1e1e; --bg-sunk: #262626; --surface: #242424; --surface-2: #303030;
+  --text: #dadada; --text-2: #c8c8c8; --muted: #9a9a9a; --faint: #6e6e6e;
+  --line: rgba(255, 255, 255, 0.08); --line-strong: rgba(255, 255, 255, 0.15); --hover: rgba(255, 255, 255, 0.05); --active: rgba(255, 255, 255, 0.08);
+}
+:root[data-palette="obsidian"] {
+  --bg: var(--background-primary, #ffffff); --bg-sunk: var(--background-secondary, #f6f6f6); --surface: var(--background-primary, #ffffff);
+  --surface-2: var(--background-modifier-hover, #f1f1f1); --text: var(--text-normal, #222); --text-2: var(--text-normal, #3a3a3a);
+  --muted: var(--text-muted, #6b6b6b); --faint: var(--text-faint, #a0a0a0); --line: var(--background-modifier-border, rgba(0,0,0,.09));
+  --line-strong: var(--background-modifier-border-hover, rgba(0,0,0,.16)); --font-sans: var(--font-interface, system-ui, sans-serif);
+}
+/* ───────── 强调色（accent） ───────── */
+:root[data-accent="graphite"] { --accent: #3d3d3a; --accent-soft: #6b6a64; --accent-bg: rgba(61, 61, 58, 0.09); }
+:root[data-accent="graphite"][data-theme="dark"] { --accent: #e5e3da; --accent-soft: #bdbab0; --accent-bg: rgba(229, 227, 218, 0.1); }
+:root[data-accent="moss"] { --accent: #5b7a4c; --accent-soft: #7a9a69; --accent-bg: rgba(91, 122, 76, 0.11); }
+:root[data-accent="indigo"] { --accent: #4f5fa8; --accent-soft: #6f7ec4; --accent-bg: rgba(79, 95, 168, 0.1); }
+:root[data-accent="obsidian"] { --accent: var(--interactive-accent, #7c5cff); --accent-soft: var(--interactive-accent-hover, #8f74ff); --accent-bg: rgba(124, 92, 255, 0.1); }
