@@ -5,6 +5,7 @@ import { InboxStream, ToDigest, FlowLanes, unreadMeta, digestList } from './card
 import InboxPage, { FlowPage } from './InboxPage';
 import MaterialPage from './MaterialPage';
 import BatchesPage from './BatchesPage';
+import { host } from '../../data/host';
 
 function MatCrumb({ id }: { id: string }) { return <>{useData(() => store.mat(id)?.title) ?? id}</>; }
 function Meta({ props }: { props: Record<string, string> }) {
@@ -12,15 +13,15 @@ function Meta({ props }: { props: Record<string, string> }) {
   return props.view === 'flow' ? null : <>{props.view === 'digest' ? d : u}</>;
 }
 export default defineImpl({
-  Card: (p) => (p.view === 'digest' ? <ToDigest {...p} /> : p.view === 'flow' ? <FlowLanes {...p} /> : <InboxStream {...p} />),
+  Card: (p) => (host && ['digest', 'flow'].includes(p.view || '') ? <div className="empty small">材料处理流程待接入，可先在收件中查看原文。</div> : p.view === 'digest' ? <ToDigest {...p} /> : p.view === 'flow' ? <FlowLanes {...p} /> : <InboxStream {...p} />),
   Meta,
   Page: () => (
     <Routes>
       <Route index element={<InboxPage />} />
       <Route path="m/:id" element={<MaterialPage />} />
-      <Route path="batches" element={<BatchesPage />} />
-      <Route path="batches/:id" element={<BatchesPage />} />
-      <Route path="flow" element={<FlowPage />} />
+      <Route path="batches" element={host ? <InboxPage /> : <BatchesPage />} />
+      <Route path="batches/:id" element={host ? <InboxPage /> : <BatchesPage />} />
+      <Route path="flow" element={host ? <InboxPage /> : <FlowPage />} />
     </Routes>
   ),
   Crumb: ({ seg: [a, b] }) => (a === 'm' ? <MatCrumb id={b} /> : <>{a === 'batches' ? (b ? `批次 ${b}` : '处理批次') : a === 'flow' ? '流转' : a}</>),

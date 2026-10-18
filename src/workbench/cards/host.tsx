@@ -9,6 +9,7 @@ import { Link, useParams } from 'react-router-dom';
 import { AlertTriangle, RotateCcw } from 'lucide-react';
 import type { CardImpl, CardModule } from './protocol';
 import { mod } from './registry';
+import { host, connectedCards } from '../../data/host';
 
 const cache = new Map<string, CardImpl>();
 const loading = new Map<string, Promise<CardImpl>>();
@@ -19,6 +20,7 @@ function load(m: CardModule) {
 }
 /** 拿到某张卡的实现（没加载就去加载）。失败时 error 有值，retry 重新加载 */
 export function useImpl(m?: CardModule) {
+  if (host && m && !connectedCards.has(m.id)) m = undefined;
   const [, tick] = useState(0);
   const impl = m ? cache.get(m.id) : undefined;
   useEffect(() => { if (m && !impl) load(m).then(() => tick((x) => x + 1), () => tick((x) => x + 1)); }, [m, impl]);
@@ -59,6 +61,7 @@ export function Slot({ m, pick, fallback = null, ...rest }: { m: CardModule; pic
 /** 卡片正文（画板上） */
 export function CardBody({ m, children }: { m: CardModule; children: (impl: CardImpl) => ReactNode }) {
   const { impl, error, retry } = useImpl(m);
+  if (host && !connectedCards.has(m.id)) return <div className="empty small">此卡的实际接入待细化</div>;
   if (error) return <CardError name={m.name} msg="这张卡的代码没加载成功" onRetry={retry} compact />;
   if (!impl) return <Loading />;
   return <CardBoundary name={m.name}><Suspense fallback={<Loading />}>{children(impl)}</Suspense></CardBoundary>;
@@ -70,6 +73,7 @@ export function CardPage() {
   const m = mod(cardId);
   const { impl, error, retry } = useImpl(m);
   if (!m) return <div className="page"><div className="empty"><h3>没有这张卡片：{cardId}</h3><p className="muted small">可能已经被删掉或改了名字。<Link className="link" to="/cards">看全部卡片</Link></p></div></div>;
+  if (host && !connectedCards.has(m.id)) return <div className="page"><div className="empty"><h3>{m.name} · 待接入</h3><p>保留现有界面，具体功能按后续细节接入。</p></div></div>;
   if (error) return <div className="page"><CardError name={m.name} msg="这张卡的代码没加载成功" onRetry={retry} /></div>;
   if (!impl) return <Loading page />;
   if (!impl.Page) return <div className="page"><div className="empty"><h3>「{m.name}」没有完整页</h3><p className="muted small">它只在画板上显示。</p></div></div>;

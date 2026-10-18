@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { write as sharedWrite, touch } from './store';
 import { today } from './time';
+import { host } from './host';
 
 /**
  * 卡片私有数据。每张卡自己的东西（QQ 群列表、节点延迟、便签文字……）放在自己文件夹的 store.ts 里：
@@ -21,10 +22,11 @@ const CONTENT: Reg[] = [];
  * o.content = true：这是「我的内容」（便签文字、打卡），不是样例——
  * 存在 pkd.v5.content.<id>.v1，不按天重置，「重置样例数据」也不动它。
  */
-export function cardStore<T extends object>(id: string, init: () => T, o: { daily?: boolean; content?: boolean } = {}) {
+export function cardStore<T extends object>(id: string, init: () => T, o: { daily?: boolean; content?: boolean; live?: () => NoInfer<T> } = {}) {
   const daily = o.daily ?? !o.content;
   const KEY = o.content ? `pkd.v5.content.${id}.v1` : `pkd.v5.card.${id}.v1`;
   const read = (): T => {
+    if (host) return o.live ? o.live() : init();
     try { const s = localStorage.getItem(KEY); if (s) { const j = JSON.parse(s); if (!daily || j.__for === today()) { delete j.__for; return j; } } } catch { /* ignore */ }
     return init();
   };
@@ -32,7 +34,7 @@ export function cardStore<T extends object>(id: string, init: () => T, o: { dail
   let v = 0;
   const ls = new Set<() => void>();
   const sub = (f: () => void) => { ls.add(f); return () => { ls.delete(f); }; };
-  const emit = () => { v++; try { localStorage.setItem(KEY, JSON.stringify({ ...d, __for: today() })); } catch { /* quota */ } ls.forEach((f) => f()); };
+  const emit = () => { v++; if (!host) { try { localStorage.setItem(KEY, JSON.stringify({ ...d, __for: today() })); } catch { /* quota */ } } ls.forEach((f) => f()); };
   /** 自己的订阅者 + 共享订阅者（useData 里顺带读了私有数据的组件也会刷新） */
   const emitAll = () => { emit(); touch(); };
   const s = {

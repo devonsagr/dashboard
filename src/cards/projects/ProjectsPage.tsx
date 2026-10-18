@@ -1,4 +1,6 @@
 import { useNavigate, useParams } from 'react-router-dom';
+import { useState } from 'react';
+import { host } from '../../data/host';
 import { RefreshCw, Sparkles, Unlink } from 'lucide-react';
 import { store, useData, type Project, type WorkItem } from '../../data';
 import { full, nowIso, relTime } from '../../data/time';
@@ -7,6 +9,7 @@ import { Chip, Empty, KV, PageHeader, SampleMark, Section, Tabs, Tag } from '../
 import { RefLine, RefPath } from '../../ui/refs';
 import { useWrite, WriteNote } from '../../ui/write';
 import { OWN_TONE, ProjectLine, STATUS_TONE } from './cards';
+import { useOverlay } from '../../workbench/app/overlay';
 
 export default function ProjectsPage() {
   const { id } = useParams();
@@ -16,15 +19,30 @@ export default function ProjectsPage() {
 function ProjectList() {
   const ps = useData((db) => db.projects);
   const groups: Project['ownership'][] = ['产品项目', '卡片模块', '独立工具'];
+  if (host) return <div className="page">
+    <PageHeader title="项目" sub="读取现有项目文件中的状态、目标和下一步。" />
+    <NewProject />
+    <Section title="已有项目" count={ps.length}>{ps.map((p) => <ProjectLine key={p.id} p={p} />)}</Section>
+  </div>;
   return (
     <div className="page">
       <PageHeader title="项目" sub={<>项目是长期推进的事。信息来自项目自己的路线图、交接和工程仓库（只读投影）；我的回应通过「待我决策」回到项目。<SampleMark /></>} />
+      {host && <NewProject />}
       <div className="note-box small">三种归属：<b>产品项目</b>（有自己的目标和仓库）、<b>卡片模块</b>（某个产品里的一块，比如仪表盘的一张卡）、<b>独立工具</b>（单独跑的小工具）。</div>
       {groups.map((g) => { const l = ps.filter((p) => p.ownership === g); return l.length ? <Section key={g} title={g} count={l.length}>{l.map((p) => <ProjectLine key={p.id} p={p} />)}</Section> : null; })}
     </div>
   );
 }
 
+function NewProject() {
+  const [name, setName] = useState(''), [purpose, setPurpose] = useState(''); const w = useWrite(); const nav = useNavigate();
+  return <Section title="新建项目"><form className="stack" onSubmit={async (e) => {
+    e.preventDefault(); const r = await w.run(() => store.createProject(name, purpose)); if (r.status === 'ok') nav(`/c/projects/${r.targetId}`);
+  }}><label>名称<input className="input" aria-label="项目名称" value={name} onChange={(e) => setName(e.target.value)} /></label>
+    <label>目标<textarea className="input" aria-label="项目目标" value={purpose} onChange={(e) => setPurpose(e.target.value)} /></label>
+    <div><button className="btn sm" disabled={!name.trim() || w.busy}>创建项目</button></div><WriteNote w={w} />
+  </form></Section>;
+}
 const TABS = [['overview', '档案'], ['follow', '跟进'], ['work', '工作项'], ['eng', '工程'], ['handoff', '交接'], ['links', '关联']] as const;
 type T = (typeof TABS)[number][0];
 
@@ -36,7 +54,16 @@ function ProjectDetail({ id }: { id: string }) {
   const kids = useData((db) => db.projects.filter((x) => x.parentId === id));
   const asks = useData((db) => db.decisions.filter((d) => d.projectId === id));
   const w = useWrite();
+  const { toast } = useOverlay();
+  const actions = useData((db) => db.actions.filter((a) => a.projectId === id && !a.archived));
   if (!p) return <div className="page"><Empty title="找不到这个项目" /></div>;
+  if (host) return <div className="page">
+    <PageHeader title={p.name} sub={<><Chip tone={STATUS_TONE[p.status]}>{p.status}</Chip> <RefPath path={p.path} /></>}
+      actions={<button className="btn sm" onClick={() => store.refreshVault().then(() => toast('已重新读取'), (e) => toast(String(e.message || e), undefined, 'bad'))}><RefreshCw size={13} />重新读取</button>} />
+    <Section title="项目原文中的信息"><KV rows={[["目标", p.purpose || '未填写'], ["阶段", p.stage || '未填写'], ["下一步", p.follow.next || '未填写'], ["截至", full(p.asOf)]]} /></Section>
+    <Section title="关联行动" count={actions.length}>{actions.length ? actions.map((a) => <ActionRow key={a.id} a={a} showDate />) : <Empty title="暂无关联行动" />}</Section>
+    <Section title="相关请求" count={asks.length}>{asks.length ? asks.map((d) => <DecisionRow key={d.id} d={d} />) : <Empty title="暂无相关请求" />}</Section>
+  </div>;
   const refresh = (kind: '普通读取' | 'AI 语义刷新') => w.run(() => store.write('refresh', `${kind}：${p.name}`, () => {
     const q = store.proj(id)!;
     q.refreshes.unshift({ kind, at: nowIso(), status: kind === '普通读取' ? 'ok' : 'pending', note: kind === '普通读取' ? '重新读取路线图 / 交接 / Git（样例：内容没有变化）' : '已请求 AI 重新理解项目文档；结果回来前沿用旧摘要' });
@@ -48,7 +75,7 @@ function ProjectDetail({ id }: { id: string }) {
     <div className="page">
       <PageHeader title={p.name}
         sub={<span className="row" style={{ gap: 6, flexWrap: 'wrap' }}><Tag tone={OWN_TONE[p.ownership]}>{p.ownership}</Tag><Chip tone={STATUS_TONE[p.status]}>{p.status}</Chip><span className="small muted">{p.stage}</span>{parent && <span className="small muted">属于 <button className="link" onClick={() => nav(`/c/projects/${parent.id}`)}>{parent.name}</button></span>}<span className="small faint">截至 {relTime(p.asOf)}</span></span>}
-        actions={<><button className="btn sm" disabled={w.busy} onClick={() => refresh('普通读取')}><RefreshCw size={13} />重新读取</button><button className="btn sm btn-ghost" disabled={w.busy} onClick={() => refresh('AI 语义刷新')}><Sparkles size={13} />AI 语义刷新</button></>} />
+        actions={<><button className="btn sm" disabled={w.busy} onClick={() => host ? store.refreshVault() : refresh('普通读取')}><RefreshCw size={13} />重新读取</button>{!host && <button className="btn sm btn-ghost" disabled={w.busy} onClick={() => refresh('AI 语义刷新')}><Sparkles size={13} />AI 语义刷新</button>}</>} />
       <WriteNote w={w} />
       <Tabs id="proj" value={tab as T} onChange={(k) => nav(`/c/projects/${id}${k === 'overview' ? '' : '/' + k}`)} items={TABS.map(([k, l]) => ({ key: k, label: l, count: k === 'work' ? p.workItems.filter((x) => x.status !== '已完成').length : k === 'follow' ? openAsks.length || undefined : undefined }))} />
       {tab === 'overview' && <Overview p={p} kids={kids} />}

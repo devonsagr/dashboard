@@ -3,6 +3,7 @@ import { store, useData, type Project } from '../../data';
 import { relTime } from '../../data/time';
 import { Chip, Empty, MoreLink, Tag } from '../../ui/ui';
 import { useOverlay } from '../../workbench/app/overlay';
+import { host } from '../../data/host';
 
 export const STATUS_TONE: Record<Project['status'], string> = { 未开始: 'faint', 准备中: 'neutral', 进行中: 'accent', 等待用户: 'warn', 等待外部: 'warn', 已完成: 'ok', 部分完成: 'info', 受阻: 'bad', 已归档: 'faint' };
 export const OWN_TONE: Record<Project['ownership'], string> = { 产品项目: 'accent', 卡片模块: 'info', 独立工具: 'neutral' };
@@ -15,8 +16,8 @@ export function ProjectLine({ p, compact }: { p: Project; compact?: boolean }) {
   return (
     <button className="proj-line" onClick={(e) => open({ kind: 'project', id: p.id }, e.currentTarget)}>
       <div className="proj-line-main">
-        <div className="row" style={{ gap: 6, minWidth: 0 }}><span className="ellipsis proj-name">{p.name}</span>{!compact && <Tag tone={OWN_TONE[p.ownership]}>{p.ownership}</Tag>}</div>
-        <div className="small muted ellipsis">{p.follow.blocker ? <span className="tone-bad-text">卡在：{p.follow.blocker}</span> : <>下一步（{p.follow.owner}）：{p.follow.next}</>}</div>
+        <div className="row" style={{ gap: 6, minWidth: 0 }}><span className="ellipsis proj-name">{p.name}</span>{!compact && !host && <Tag tone={OWN_TONE[p.ownership]}>{p.ownership}</Tag>}</div>
+        <div className="small muted ellipsis">{p.follow.blocker ? <span className="tone-bad-text">卡在：{p.follow.blocker}</span> : <>下一步{!host && `（${p.follow.owner}）`}：{p.follow.next || '未填写'}</>}</div>
       </div>
       <div className="proj-line-side">
         <Chip tone={STATUS_TONE[p.status]}>{p.status}</Chip>

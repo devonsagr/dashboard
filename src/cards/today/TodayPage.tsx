@@ -7,6 +7,7 @@ import { ActionRow } from '../../ui/objects';
 import { Empty, PageHeader, SampleMark, Section, Tabs, Tag } from '../../ui/ui';
 import { useWrite, WriteNote } from '../../ui/write';
 import { useOverlay } from '../../workbench/app/overlay';
+import { host } from '../../data/host';
 
 const SEC: { k: ActionSection; l: string; d: string }[] = [
   { k: 'overdue', l: '逾期', d: '日期已过还没完成' }, { k: 'today', l: '今天', d: '' }, { k: 'undated', l: '未排期', d: '没填日期的事，不会自动变成今天' },
@@ -57,7 +58,7 @@ function NewActionForm() {
   return (
     <form className="new-action" onSubmit={(e) => { e.preventDefault(); if (!f.title.trim()) return; w.run(() => store.createAction({ title: f.title.trim(), date: f.date || undefined, time: f.time || undefined, priority: f.priority })).then((r) => r.status === 'ok' && setF({ ...f, title: '' })); }}>
       <input className="input" placeholder="新建一条行动…" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} aria-label="行动标题" />
-      <input className="input sm" type="date" value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} aria-label="日期（可以留空=未排期）" title="留空 = 未排期" />
+      <input className="input sm" type="date" required={!!host} value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} aria-label={host ? '日期' : '日期（可以留空=未排期）'} title={host ? '现有行动文件需要日期' : '留空 = 未排期'} />
       <input className="input sm" type="time" value={f.time} onChange={(e) => setF({ ...f, time: e.target.value })} aria-label="时间" />
       <select className="input sm" value={f.priority} onChange={(e) => setF({ ...f, priority: e.target.value as Priority })} aria-label="优先级">{['高', '中', '低'].map((p) => <option key={p}>{p}</option>)}</select>
       <button className="btn btn-primary sm" disabled={w.busy || !f.title.trim()}>添加</button>

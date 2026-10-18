@@ -1,4 +1,5 @@
-import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { HashRouter, MemoryRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { host } from '../../data/host';
 import Shell from './Shell';
 import { OverlayProvider } from './overlay';
 import { CardPage } from '../cards/host';
@@ -11,7 +12,7 @@ import Settings from '../pages/Settings';
  *   /、/b/:boardId     画板
  *   /c/:cardId/*       某张卡自己的完整页（子路由由卡片自己定）
  *   /cards、/settings  全部卡片、设置
- * HashRouter：双击 dist/index.html 或挂进 Obsidian 视图时也能用。
+ * 浏览器用 HashRouter；Obsidian 内存路由不改宿主地址。
  */
 const LEGACY: [string, string][] = [
   ['/today/approvals', '/c/approvals'], ['/today', '/c/today'], ['/decisions', '/c/decisions'], ['/projects', '/c/projects'], ['/inbox', '/c/inbox'], ['/flow', '/c/inbox/flow'],
@@ -29,8 +30,9 @@ function Legacy() {
   return <Navigate replace to={hit[1] + rest + search} />;
 }
 export default function App() {
+  const Router = host ? MemoryRouter : HashRouter;
   return (
-    <HashRouter>
+    <Router>
       <OverlayProvider>
         <Routes>
           <Route element={<Shell />}>
@@ -43,6 +45,6 @@ export default function App() {
           </Route>
         </Routes>
       </OverlayProvider>
-    </HashRouter>
+    </Router>
   );
 }

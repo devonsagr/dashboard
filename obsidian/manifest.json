@@ -1,0 +1,9 @@
+{
+  "id": "dashboard-v5",
+  "name": "Dashboard v5",
+  "version": "0.5.1",
+  "minAppVersion": "1.7.2",
+  "description": "A card workspace connected to existing Vault Markdown and the installed dashboard repository.",
+  "author": "Dashboard contributors",
+  "isDesktopOnly": true
+}

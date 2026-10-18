@@ -8,6 +8,7 @@ import { Empty, History, KV, PageHeader, SampleMark, Section, Tag } from '../../
 import { RefLine, RefPath } from '../../ui/refs';
 import { useWrite, WriteNote } from '../../ui/write';
 import { useOverlay } from '../../workbench/app/overlay';
+import { host } from '../../data/host';
 
 /** 待我决策（完整页）：按「需要我做什么」分组 */
 export default function DecisionsPage() {
@@ -25,10 +26,10 @@ function DecisionList() {
   const kinds = [...new Set(open.map((d) => d.kind))];
   return (
     <div className="page">
-      <PageHeader title="待我决策" sub={<>项目和 AI 需要我亲自做的事：验收、选方案、动手操作、补充信息。回应会写回请求文件，再投递给项目。<SampleMark /></>} />
+      <PageHeader title="待我决策" sub={<>{host ? '读取现有请求，回应直接写回原文件。' : '项目和 AI 需要我亲自做的事：验收、选方案、动手操作、补充信息。回应会写回请求文件，再投递给项目。'}<SampleMark /></>} />
       {kinds.map((k) => <Section key={k} title={<><Tag tone={KIND_TONE[k]}>{k}</Tag> 等我回应</>} count={open.filter((d) => d.kind === k).length}>{open.filter((d) => d.kind === k).map((d) => <DecisionRow key={d.id} d={d} />)}</Section>)}
       {!open.length && <Empty title="没有等你回应的请求" />}
-      {later.length > 0 && <Section title="稍后" count={later.length} desc="到期后会回到上面">{later.map((d) => <DecisionRow key={d.id} d={d} />)}</Section>}
+      {later.length > 0 && <Section title="稍后" count={later.length} desc={host ? '可手动重新打开' : '到期后会回到上面'}>{later.map((d) => <DecisionRow key={d.id} d={d} />)}</Section>}
       {stale.length > 0 && <Section title="可能过期 / 已被取代" count={stale.length} desc="请求写下之后情况变了；先确认是否还需要回应">{stale.map((d) => <DecisionRow key={d.id} d={d} />)}</Section>}
       <Section title="已回应" count={done.length} desc="回应之后在等谁">{done.map((d) => <DecisionRow key={d.id} d={d} />)}</Section>
     </div>
@@ -91,13 +92,13 @@ function DecisionDetail({ id }: { id: string }) {
               {d.recommend && <p className="small muted">推荐理由：{d.recommend.text}</p>}
             </Section>
           )}
-          <Section title={answered ? '你的回应' : '回应'} desc={answered ? undefined : '写回请求文件，再投递给项目；投递前都可以改'}>
+          <Section title={answered ? '你的回应' : '回应'} desc={answered ? undefined : host ? '写回请求原文件。后续可重新打开并回应。' : '写回请求文件，再投递给项目；投递前都可以改'}>
             {d.response && (
               <div className={`resp-box ${d.status}`}>
                 <div className="row" style={{ gap: 6 }}><Tag tone={d.response.kind === '需修改' ? 'warn' : d.response.kind === '不适用' ? 'faint' : 'ok'}>{d.response.kind}</Tag>{d.response.optionId && <span>{d.options?.find((o) => o.id === d.response!.optionId)?.label}</span>}<span className="mono faint small">{full(d.response.at)}</span>{d.response.verify && <Tag tone={d.response.verify === '待核实' ? 'warn' : 'neutral'}>{d.response.verify}</Tag>}</div>
                 {d.response.text && <p className="prose">{d.response.text}</p>}
                 {d.after && <div className="small muted">接下来等 <b>{d.after.waitingOn}</b>：{d.after.note}</div>}
-                {d.status === 'later' && <div className="small muted">稍后：{relDay(d.laterUntil)}再提醒</div>}
+                {d.status === 'later' && !host && <div className="small muted">稍后：{relDay(d.laterUntil)}再提醒</div>}
               </div>
             )}
             {!answered && (
@@ -107,7 +108,7 @@ function DecisionDetail({ id }: { id: string }) {
                 </div>
                 {kind && <textarea className="input" rows={3} value={text} onChange={(e) => setText(e.target.value)} placeholder={NEED_TEXT.includes(kind) ? `写下${kind === '需修改' ? '要改什么' : kind === '补充' ? '补充的信息' : '为什么不适用'}（必填）` : '补充说明（可不填）'} aria-label="回应说明" />}
                 {kind && <div className="row" style={{ gap: 8 }}><button className="btn btn-primary sm" disabled={!canSend || w.busy} onClick={send}>{w.busy ? '发送中…' : `确认「${kind}」`}</button><button className="btn btn-ghost sm" onClick={() => setKind(null)}>取消</button>{kind === '已操作' && <span className="small muted">项目会再核实操作是否生效</span>}</div>}
-                <WriteNote w={w} ok="已写回请求文件，等待投递给项目" />
+                <WriteNote w={w} ok={host ? '已写回请求原文件' : '已写回请求文件，等待投递给项目'} />
               </div>
             )}
           </Section>

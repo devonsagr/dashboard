@@ -1,5 +1,5 @@
 /**
- * 样例数据端口（mock）：内存 + localStorage['pkd.v5.sample.v3']。
+ * 共享业务入口：浏览器使用合成示例，Obsidian 使用注入的 Vault 宿主。
  *
  * 前端只通过这里读写业务对象。Codex 接入时实现同名函数（读写 Markdown / 本机服务），
  * 页面与卡片不用改。写入一律是异步的，返回 Receipt：
@@ -11,24 +11,32 @@
  */
 import * as S from './sample';
 import type {
-  Action, ActionSection, Approval, Decision, DecisionResponse, Hist, Material, MaterialMain, Receipt, CaptureType,
+  Action, ActionSection, Approval, Decision, DecisionResponse, Hist, Material, MaterialMain, Receipt, CaptureType, Source,
 } from './types';
 import { addDays, nowIso, today, dayKey } from './time';
 import { flowPath, resolveRoute } from './settings';
+import { host, hostSnapshot } from './host';
 
 const KEY = 'pkd.v5.sample.v5';
 const SIM_KEY = 'pkd.v5.sim.v1';
 
 function fresh() {
+  if (hostSnapshot) return { generatedFor: today(), ...hostSnapshot, approvals: [] as Approval[], receipts: [] as Receipt[],
+    sources: [['C01', '行动'], ['C02', '待我决策'], ['C03', '项目'], ['C08', '随手记'], ['C11', '日记'], ['C13', '已有收集材料']].map(([id, name]): Source => ({
+      id, name, group: '仪表盘' as const, mode: '手动' as const, health: 'ok' as const, provides: name,
+      via: '当前 Vault 的既有文件', feedsFlow: id === 'C08' || id === 'C13',
+    })),
+  };
   return {
     generatedFor: today(),
     sources: S.sources(), materials: S.materials(), approvals: S.approvals(), actions: S.actions(), decisions: S.decisions(), projects: S.projects(),
-    diary: S.diary(), library: S.library(), receipts: S.receipts(),
+    diary: S.diary(), library: S.library(), receipts: S.receipts(), recentDocs: [] as { path: string; at: string }[],
   };
 }
 export type DB = ReturnType<typeof fresh>;
 
 function load(): DB {
+  if (host) return fresh();
   try {
     const s = localStorage.getItem(KEY);
     if (s) { const d = JSON.parse(s) as DB; if (d.generatedFor === today()) return d; }
@@ -40,7 +48,7 @@ let version = 0;
 const ls = new Set<() => void>();
 export const subscribe = (f: () => void) => { ls.add(f); return () => { ls.delete(f); }; };
 export const getVersion = () => version;
-function emit() { version++; try { localStorage.setItem(KEY, JSON.stringify(db)); } catch { /* quota */ } ls.forEach((l) => l()); }
+function emit() { version++; if (!host) { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch { /* quota */ } } ls.forEach((l) => l()); }
 export function resetSample() { db = fresh(); emit(); }
 /** 让别的 store（卡片私有数据）在写入后也触发共享订阅者刷新 */
 export const touch = () => emit();
@@ -65,6 +73,7 @@ interface Opt { path?: string; runtime?: boolean; targetId?: string; noConflict?
  * 所有写入的统一入口。apply 只在成功时执行；失败 / 未知 / 冲突时不改本地数据。
  */
 export async function write(op: string, label: string, apply: () => { path?: string; targetId?: string; detail?: string } | void, o: Opt = {}): Promise<Receipt> {
+  if (host) return { id: nid('rc'), op, label, at: nowIso(), status: 'failed', error: '这一项尚未接入 Vault，可先打开原文处理' };
   await sleep(420 + Math.random() * 260);
   let status: Receipt['status'] = sim.write === 'conflict' && o.noConflict ? 'failed' : sim.write;
   let error = status === 'ok' ? undefined : ERR[status as Exclude<SimWrite, 'ok'>];
@@ -77,6 +86,21 @@ export async function write(op: string, label: string, apply: () => { path?: str
   return r;
 }
 export const H = (by: Hist['by'], text: string): Hist => ({ at: nowIso(), by, text });
+export async function refreshVault() {
+  if (!host) return;
+  const snapshot = await host.load(); Object.assign(db, snapshot); emit();
+}
+async function vaultWrite(op: string, label: string, data: Record<string, unknown>): Promise<Receipt> {
+  let result: { targetId?: string; path?: string; detail?: string };
+  try { result = await host!.execute(op, data); }
+  catch (error) {
+    const r: Receipt = { id: nid('rc'), op, label, at: nowIso(), status: (error as { code?: string }).code === 'conflict' ? 'conflict' : 'failed', error: error instanceof Error ? error.message : String(error) };
+    db.receipts.unshift(r); emit(); return r;
+  }
+  const r: Receipt = { id: nid('rc'), op, label, at: nowIso(), status: 'ok', ...result };
+  try { await refreshVault(); } catch { r.detail = '文件已写入，界面读取失败，请刷新'; }
+  db.receipts.unshift(r); emit(); return r;
+}
 
 /* ───────── 读取 / 推导 ───────── */
 export const mat = (id?: string) => db.materials.find((m) => m.id === id);
@@ -117,6 +141,7 @@ export const pendingApprovals = () => db.approvals.filter((a) => a.state === 'pe
 
 /* ───────── 随手记 ───────── */
 export function capture(text: string, type: CaptureType) {
+  if (host) return vaultWrite('capture', '保存随手记', { text, type });
   const id = nid('m');
   return write('capture', `随手记：${text.trim().split('\n')[0].slice(0, 30)}`, () => {
     const now = nowIso();
@@ -218,6 +243,7 @@ export const unlinkProject = (id: string, projectId: string) => write('link', '�
 /** 材料 → 行动（用户明确操作）。同一材料已有未删除的行动时不重复创建（S02） */
 export function materialToAction(id: string, title: string, date?: string) {
   const m = mat(id)!;
+  if (host) return vaultWrite('action-new', `转为行动：${title}`, { title, date: date || today(), priority: '中', body: `来源：${m.ref.url || m.ref.path || m.ref.label}\n\n${m.text}`, source: m.ref.path ? `[[${m.ref.path}]]` : undefined });
   const exist = m.outputs.find((o) => o.kind === 'action' && act(o.id) && !act(o.id)!.deleted);
   return write('to-action', exist ? '已有行动（未重复创建）' : `转为行动：${title}`, () => {
     if (exist) return { targetId: exist.id, path: act(exist.id)!.path, detail: '这条材料已经有行动了，没有重复创建' };
@@ -270,17 +296,19 @@ function newAction(p: Partial<Action> & { title: string }): Action {
   db.actions = [...db.actions, a];
   return a;
 }
-export const createAction = (p: Partial<Action> & { title: string }) => write('action-new', `新建行动：${p.title}`, () => { const a = newAction(p); return { targetId: a.id, path: a.path }; });
-export const updateAction = (id: string, patch: Partial<Action>, what = '编辑') => write('action-edit', `${what}：${act(id)?.title}`, () => {
+export const createAction = (p: Partial<Action> & { title: string }) => host ? vaultWrite('action-new', `新建行动：${p.title}`, { ...p }) : write('action-new', `新建行动：${p.title}`, () => { const a = newAction(p); return { targetId: a.id, path: a.path }; });
+export const updateAction = (id: string, patch: Partial<Action>, what = '编辑') => host ? vaultWrite('done' in patch ? 'action-toggle' : patch.deleted ? 'action-delete' : 'archived' in patch ? patch.archived ? 'action-archive' : 'action-unarchive' : 'action-edit', `${what}：${act(id)?.title}`, { id, patch }) : write('action-edit', `${what}：${act(id)?.title}`, () => {
   const a = act(id)!; Object.assign(a, patch); a.history.push(H('我', what)); return { path: a.path, targetId: id };
 }, { targetId: id });
 export const toggleDone = (id: string) => { const a = act(id)!; return updateAction(id, { done: a.done ? undefined : nowIso() }, a.done ? '恢复未完成' : '完成'); };
 export const archiveAction = (id: string, on = true) => updateAction(id, { archived: on ? nowIso() : undefined }, on ? '归档' : '取消归档');
 export const deleteAction = (id: string, on = true) => updateAction(id, { deleted: on ? nowIso() : undefined }, on ? '删除（可恢复）' : '恢复');
-export const reorder = (ids: string[]) => write('reorder', '调整顺序', () => { ids.forEach((id, i) => { const a = act(id); if (a) a.order = i; }); }, { noConflict: true });
+export const reorder = (ids: string[]) => host ? vaultWrite('action-reorder', '调整顺序', { ids }) : write('reorder', '调整顺序', () => { ids.forEach((id, i) => { const a = act(id); if (a) a.order = i; }); }, { noConflict: true });
+export const createProject = (name: string, purpose: string) => vaultWrite('project-new', '新建项目', { name, purpose });
 
 /* ───────── 待我决策 ───────── */
 export function respond(id: string, r: Omit<DecisionResponse, 'at'>) {
+  if (host) return vaultWrite('respond', '保存回应', { id, response: r });
   const d = dec(id)!;
   return write('respond', `回应「${d.title}」：${r.kind}`, () => {
     const resp: DecisionResponse = { ...r, at: nowIso(), verify: r.kind === '已操作' ? '待核实' : '用户已反馈' };
@@ -296,10 +324,11 @@ export function respond(id: string, r: Omit<DecisionResponse, 'at'>) {
     return { path: d.path, targetId: id };
   });
 }
-export const reopen = (id: string) => write('reopen', '重新打开请求', () => { const d = dec(id)!; d.status = 'open'; d.after = undefined; d.history.push(H('我', '重新打开')); return { path: d.path }; });
+export const reopen = (id: string) => host ? vaultWrite('reopen', '重新打开请求', { id }) : write('reopen', '重新打开请求', () => { const d = dec(id)!; d.status = 'open'; d.after = undefined; d.history.push(H('我', '重新打开')); return { path: d.path }; });
 export const scheduleCheck = (id: string) => {
   const d = dec(id)!;
   const exist = d.actionIds.map(act).find((a) => a && !a.deleted);
+  if (host) return vaultWrite('check-action', '安排验收行动', { id });
   return write('check-action', exist ? '已有验收行动（未重复创建）' : '安排验收行动', () => {
     if (exist) return { targetId: exist.id, path: exist.path };
     const a = newAction({ title: `验收：${d.title.replace(/[？?]$/, '')}`, date: today(), kind: '验收行动', decisionId: id, projectId: d.projectId, workItemId: d.workItemId, body: '完成这条行动只代表看过了；验收结论回到「待我决策」给出。', refs: [{ source: 'C02', label: `请求 ${id}`, path: d.path }] });
@@ -310,12 +339,15 @@ export const scheduleCheck = (id: string) => {
 
 
 /* ───────── 日记（有冲突语义；复盘也读它，所以是共享对象） ───────── */
-export function saveDiary(date: string, kind: string, text: string) {
+export function saveDiary(date: string, kind: string, text: string, mtime?: string) {
+  if (host) return vaultWrite('diary', '保存日记', { date, kind, text, mtime });
   const day = db.diary.find((d) => d.date === date)!; const f = day.files.find((x) => x.kind === kind)!;
   return write('diary', `保存 ${f.path.split('/').pop()}`, () => { f.text = text; f.state = text ? 'exists' : 'empty'; f.mtime = nowIso(); f.error = undefined; return { path: f.path }; });
 }
-export const ensureDiaryDay = (date: string) => {
-  if (db.diary.some((d) => d.date === date)) return;
+export const ensureDiaryDay = async (date: string, refresh = false) => {
+  if (!refresh && db.diary.some((d) => d.date === date)) return db.diary.find((d) => d.date === date);
+  if (host) { const day = await host.diary(date); db.diary = [...db.diary.filter((d) => d.date !== date), day]; emit(); return day; }
   const dir = `示例数据/日记/${date.slice(0, 7)}/${+date.slice(8, 10) <= 15 ? '上半月' : '下半月'}/${date}`;
   db.diary.push({ date, files: (['用户原文', '生活日记整理版', 'AI项目日志'] as const).map((k) => ({ kind: k, path: `${dir}/${date}_${k}.md`, state: 'missing' as const })) });
+  emit(); return db.diary.find((d) => d.date === date);
 };

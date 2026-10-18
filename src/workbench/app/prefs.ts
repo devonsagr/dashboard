@@ -1,3 +1,4 @@
+import { preferences } from '../../data/host';
 import { useSyncExternalStore } from 'react';
 
 /** 界面偏好：只存在浏览器本地，不写进业务 Markdown */
@@ -17,7 +18,7 @@ export const ACCENTS: { id: Accent; name: string; color: string }[] = [
 export const PREFS_KEY = 'pkd.v5.prefs.v2';
 const KEY = PREFS_KEY;
 const defaults: Prefs = { theme: 'light', palette: 'warm', accent: 'clay', density: 'comfortable', motion: 'on', userName: '访客', boardNav: 'tabs', boardIcons: true };
-let prefs: Prefs = { ...defaults, ...safeParse(localStorage.getItem(KEY)) };
+let prefs: Prefs = { ...defaults, ...safeParse(preferences.getItem(KEY)) };
 const ls = new Set<() => void>();
 function safeParse(s: string | null) { try { return s ? JSON.parse(s) : {}; } catch { return {}; } }
 
@@ -32,7 +33,7 @@ export function applyPrefs() {
 }
 export function setPrefs(p: Partial<Prefs>) {
   prefs = { ...prefs, ...p };
-  localStorage.setItem(KEY, JSON.stringify(prefs));
+  preferences.setItem(KEY, JSON.stringify(prefs));
   applyPrefs();
   ls.forEach((l) => l());
 }

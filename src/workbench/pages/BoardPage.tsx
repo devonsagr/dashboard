@@ -14,6 +14,7 @@ import { useOverlay } from '../app/overlay';
 import { usePrefs } from '../app/prefs';
 import { CardCatalog } from './AllCards';
 import { SampleMark } from '../../ui/ui';
+import { host } from '../../data/host';
 
 /**
  * 画板页。第一块画板顶部有问候 + 今天的三个数；其他画板只有一行名字和说明，把空间留给卡片。
@@ -73,7 +74,7 @@ export default function BoardPage() {
           <div>
             <motion.h1 className="greet" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: [0.2, 0, 0, 1] }}>{greeting()}，{userName}</motion.h1>
             <motion.p className="sub" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.12 }}>
-              今天有 <b>{acts}</b> 件事要做，<b>{decs}</b> 个请求在等你回应，<b>{appr}</b> 条建议待采纳，<b>{fresh}</b> 条材料还没读。<SampleMark />
+              今天有 <b>{acts}</b> 件事要做，<b>{decs}</b> 个请求在等你回应，{host ? <><b>{fresh}</b> 条已收录材料。</> : <><b>{appr}</b> 条建议待采纳，<b>{fresh}</b> 条材料还没读。</>}<SampleMark />
             </motion.p>
           </div>
         ) : (

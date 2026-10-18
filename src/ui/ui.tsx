@@ -7,6 +7,7 @@ import { Check, ChevronRight, CornerDownRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { Hist, SourceHealth } from '../data/types';
 import { useData } from '../data';
+import { host } from '../data/host';
 import { full, hm, md, dateOf, relTime } from '../data/time';
 
 /* 自有标志：四块卡片（一块高亮）。spinning 时高亮依次走动，表示“在处理” */
@@ -25,7 +26,7 @@ export function Tag({ children, tone = 'neutral', title }: { children: ReactNode
 export function Chip({ children, tone = 'neutral', title }: { children: ReactNode; tone?: string; title?: string }) { return <span className={`chip tone-${tone}`} title={title}><i className="dot" />{children}</span>; }
 export function AiTag({ label = 'AI' }: { label?: string }) { return <span className="ai-tag">{label}</span>; }
 /** 「样例」小标：凡是演示数据，在显眼处标出 */
-export function SampleMark({ text = '样例' }: { text?: string }) { return <span className="sample-mark" title="这是演示用的样例数据，不代表真实情况">{text}</span>; }
+export function SampleMark({ text = '样例' }: { text?: string }) { return host ? null : <span className="sample-mark" title="这是演示用的样例数据，不代表真实情况">{text}</span>; }
 
 export const HEALTH_LABEL: Record<SourceHealth, string> = { ok: '正常', stale: '陈旧', offline: '离线', partial: '部分', missing: '缺文件', unverified: '未核验', planned: '计划中', unconfigured: '未配置' };
 export const HEALTH_TONE: Record<SourceHealth, string> = { ok: 'ok', stale: 'warn', offline: 'bad', partial: 'warn', missing: 'bad', unverified: 'faint', planned: 'faint', unconfigured: 'faint' };
@@ -34,6 +35,7 @@ export function HealthDot({ h }: { h: SourceHealth }) { return <i className={`hd
 
 export function SourceChip({ id, label }: { id: string; label?: string }) {
   const s = useData((db) => db.sources.find((x) => x.id === id));
+  if (host) return <span className="src-chip">{label ?? s?.name ?? 'Vault'}</span>;
   return <Link to={`/c/sources/${id}`} className="src-chip" onClick={(e) => e.stopPropagation()}><span className="mono">{id}</span>{label ?? s?.name}</Link>;
 }
 

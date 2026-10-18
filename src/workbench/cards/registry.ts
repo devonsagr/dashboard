@@ -3,9 +3,9 @@
  * 实现（index.tsx）在第一次用到时才加载（见 ./host.tsx）。
  */
 import type { CardCategory, CardModule } from './protocol';
-import { MODULES } from '../../cards';
-
-export { MODULES };
+import { MODULES as manifests } from '../../cards';
+import { host, connectedCards } from '../../data/host';
+export const MODULES: CardModule[] = host ? manifests.map((m) => ({ ...m, status: connectedCards.has(m.id) ? m.status === '不读数据' ? m.status : '本地' : '未接入' })) : manifests;
 export const CATEGORIES: CardCategory[] = ['轻量', '今天', '输入', '项目', '知识', '身体与工具', '自定义'];
 export const mod = (id?: string) => MODULES.find((m) => m.id === id);
 

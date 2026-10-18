@@ -13,6 +13,7 @@ import { Slot } from '../cards/host';
 import { resetCardStores } from '../../data/cardStore';
 import { store, useData, useSim } from '../../data';
 import { Mark } from '../../ui/ui';
+import { host } from '../../data/host';
 import { CommandPalette } from './CommandPalette';
 import { QuickCapture } from './QuickCapture';
 
@@ -141,8 +142,8 @@ function TopBar() {
         <button className="icon-btn" title="随手记（Ctrl J）" onClick={() => setCapture(true)}><PenLine size={15} /></button>
         <Link to="/cards" className={`icon-btn ${loc.pathname.startsWith('/cards') ? 'on' : ''}`} title="全部卡片"><LayoutGrid size={15} /></Link>
         <TopbarSlots />
-        <SamplePill />
-        <Link to="/c/sources" className={`src-pill ${bad ? 'warn' : ''}`} title={bad ? `${bad} 个接入源离线 / 陈旧 / 缺文件` : '接入源都正常'}><i className="hdot" />{bad ? bad : ''}</Link>
+        {host ? <VaultPill /> : <SamplePill />}
+        {!host && <Link to="/c/sources" className={`src-pill ${bad ? 'warn' : ''}`} title={bad ? `${bad} 个接入源离线 / 陈旧 / 缺文件` : '接入源都正常'}><i className="hdot" />{bad ? bad : ''}</Link>}
         <SettingsMenu />
       </div>
     </div>
@@ -259,6 +260,16 @@ function BoardManage({ b, close }: { b: Board; close: () => void }) {
 }
 
 /* ───────── 样例 ───────── */
+function VaultPill() {
+  const [busy, setBusy] = useState(false); const { toast } = useOverlay();
+  useEffect(() => {
+    const failed = (e: Event) => toast((e as CustomEvent).detail);
+    window.addEventListener('dashboard-save-error', failed); return () => window.removeEventListener('dashboard-save-error', failed);
+  }, [toast]);
+  return <button className="sample-pill" disabled={busy} title="重新读取当前 Vault" onClick={async () => {
+    setBusy(true); try { await store.refreshVault(); toast('已读取当前 Vault'); } catch (e) { toast(e instanceof Error ? e.message : '读取失败'); } finally { setBusy(false); }
+  }}>{busy ? '读取中…' : host!.vaultName}</button>;
+}
 function SamplePill() {
   const [open, setOpen] = useState(false);
   const sim = useSim();

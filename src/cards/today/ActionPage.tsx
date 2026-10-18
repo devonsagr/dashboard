@@ -7,6 +7,7 @@ import { MaterialRow, ProjectChip, DecisionRow } from '../../ui/objects';
 import { Empty, History, KV, PageHeader, Section, Tag } from '../../ui/ui';
 import { RefLine, RefPath } from '../../ui/refs';
 import { useWrite, WriteNote } from '../../ui/write';
+import { host } from '../../data/host';
 
 /** 行动详情：编辑标题 / 正文 / 日期 / 时间 / 优先级 / 项目；完成、归档、删除都可恢复；来源与历史 */
 export default function ActionPage() {
@@ -43,7 +44,7 @@ export default function ActionPage() {
               <label>标题<input className="input" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></label>
               <label>正文<textarea className="input" rows={4} value={f.body} onChange={(e) => setF({ ...f, body: e.target.value })} placeholder="补充说明（可不填）" /></label>
               <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-                <label>日期<input className="input sm" type="date" value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} /></label>
+                <label>日期<input className="input sm" type="date" required={!!host} value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} /></label>
                 <label>时间<input className="input sm" type="time" value={f.time} onChange={(e) => setF({ ...f, time: e.target.value })} /></label>
                 <label>优先级<select className="input sm" value={f.priority} onChange={(e) => setF({ ...f, priority: e.target.value as Priority })}>{['高', '中', '低'].map((p) => <option key={p}>{p}</option>)}</select></label>
                 <label>项目<select className="input sm" value={f.projectId} onChange={(e) => setF({ ...f, projectId: e.target.value })}><option value="">不属于项目</option>{projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
@@ -51,9 +52,9 @@ export default function ActionPage() {
               <div className="row" style={{ gap: 8 }}>
                 <button className="btn btn-primary sm" disabled={!dirty || w.busy} onClick={save}>{w.busy ? '保存中…' : '保存'}</button>
                 {dirty && <button className="btn btn-ghost sm" onClick={() => setF({ title: a.title, body: a.body ?? '', date: a.date ?? '', time: a.time ?? '', priority: a.priority, projectId: a.projectId ?? '' })}>放弃修改</button>}
-                {!f.date && <span className="small muted">没填日期 = 未排期，不会出现在「今天」</span>}
+                {!f.date && <span className="small muted">{host ? '现有行动文件需要选择日期' : '没填日期 = 未排期，不会出现在「今天」'}</span>}
               </div>
-              <WriteNote w={w} onReload={() => { w.reset(); }} onOverwrite={() => { store.setSim({ write: 'ok' }); save(); }} />
+              <WriteNote w={w} onReload={() => { w.reset(); }} onOverwrite={host ? undefined : () => { store.setSim({ write: 'ok' }); save(); }} />
             </div>
           </Section>
           {mats.length > 0 && <Section title="支持材料" count={mats.length} desc="这件事从哪些材料来">{mats.map((m) => <MaterialRow key={m.id} m={m} />)}</Section>}

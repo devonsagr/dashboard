@@ -1,15 +1,17 @@
 {
   "name": "personal-knowledge-dashboard",
   "private": true,
-  "version": "0.5.0",
+  "version": "0.5.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -p . && vite build",
+    "build:obsidian": "tsc -p . && node scripts/build-obsidian.mjs",
     "preview": "vite preview",
     "typecheck": "tsc -p . --noEmit",
     "check:privacy": "node scripts/check-privacy.mjs",
     "test:ui": "npm run build && node scripts/test-ui.mjs",
+    "test:obsidian": "node tests/obsidian.mjs",
     "test": "npm run check:privacy && npm run test:ui"
   },
   "engines": {
@@ -26,6 +28,8 @@
     "@types/react": "^19.1.9",
     "@types/react-dom": "^19.1.7",
     "@vitejs/plugin-react": "^4.6.0",
+    "esbuild": "^0.28.2",
+    "obsidian": "^1.14.4",
     "playwright": "^1.64.1",
     "typescript": "^5.8.3",
     "vite": "^7.0.6"

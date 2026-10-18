@@ -9,6 +9,7 @@ import { digestList, LANES } from './cards';
 import { useOverlay } from '../../workbench/app/overlay';
 import { createBatch } from './store';
 import { inFlow } from '../../ui/flow';
+import { host } from '../../data/host';
 
 const F: { k: string; l: string; test: (m: Material) => boolean }[] = [
   { k: 'all', l: '全部', test: (m) => !m.archived },
@@ -35,9 +36,9 @@ export default function InboxPage() {
   const set = (k: string, v: string) => { const n = new URLSearchParams(sp); if (v) n.set(k, v); else n.delete(k); setSp(n, { replace: true }); };
   return (
     <div className="page">
-      <PageHeader title="收件" sub={<>所有来源进来的材料，都走同一条流程：写备注 → 交给 AI 按备注初处理 → 你选「直接入库」或「我自己处理」；不想现在处理就放「以后读」。<SampleMark /></>}
-        actions={<><Link to="/c/inbox/batches" className="btn sm"><Layers size={13} />处理批次</Link><Link to="/c/inbox/flow" className="btn sm btn-ghost">流转</Link></>} />
-      <div className="filter-bar">{F.map((x) => <button key={x.k} className={`pill ${f === x.k ? 'on' : ''}`} onClick={() => set('f', x.k === 'all' ? '' : x.k)}>{x.l}<span className="count">{all.filter((m) => x.test(m) && (!src || m.sourceId === src)).length}</span></button>)}</div>
+      <PageHeader title="收件" sub={<>{host ? '查看 Vault 中已有的随手记和收集材料，可打开原文或转为行动。' : '所有来源进来的材料，都走同一条流程：写备注 → 交给 AI 按备注初处理 → 你选「直接入库」或「我自己处理」；不想现在处理就放「以后读」。'}<SampleMark /></>}
+        actions={!host && <><Link to="/c/inbox/batches" className="btn sm"><Layers size={13} />处理批次</Link><Link to="/c/inbox/flow" className="btn sm btn-ghost">流转</Link></>} />
+      <div className="filter-bar">{F.filter((x) => !host || ['all', 'archived'].includes(x.k)).map((x) => <button key={x.k} className={`pill ${f === x.k ? 'on' : ''}`} onClick={() => set('f', x.k === 'all' ? '' : x.k)}>{x.l}<span className="count">{all.filter((m) => x.test(m) && (!src || m.sourceId === src)).length}</span></button>)}</div>
       <div className="filter-bar">
         <span className="small faint">来源</span>
         <button className={`pill xs ${!src ? 'on' : ''}`} onClick={() => set('src', '')}>全部</button>
@@ -54,7 +55,7 @@ export default function InboxPage() {
         </div>
       )}
       <Section title={F.find((x) => x.k === f)!.l} count={list.length}>
-        {list.length ? list.map((m) => <MaterialRow key={m.id} m={m} selected={sel.includes(m.id)} onSelect={(on) => setSel(on ? [...sel, m.id] : sel.filter((x) => x !== m.id))} />) : <Empty title="这里没有材料" />}
+        {list.length ? list.map((m) => <MaterialRow key={m.id} m={m} selected={sel.includes(m.id)} onSelect={host ? undefined : (on) => setSel(on ? [...sel, m.id] : sel.filter((x) => x !== m.id))} />) : <Empty title="这里没有材料" />}
       </Section>
     </div>
   );

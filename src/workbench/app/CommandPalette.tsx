@@ -7,6 +7,7 @@ import { setPrefs } from './prefs';
 import { useData } from '../../data';
 import { boardPath, useBoards } from '../board/store';
 import { MODULES, pageOf } from '../cards/registry';
+import { host } from '../../data/host';
 
 interface Cmd { id: string; group: string; label: string; hint?: string; icon: React.ComponentType<{ size?: number }>; run: () => void }
 
@@ -32,9 +33,9 @@ export function CommandPalette() {
       ...db.actions.filter((a) => !a.deleted).map((a) => ({ id: a.id, group: '行动', label: a.title, hint: a.done ? '已完成' : a.date ?? '未排期', icon: ListChecks, run: () => { setPalette(false); open({ kind: 'action', id: a.id }); } })),
       ...db.decisions.map((d) => ({ id: d.id, group: '请求', label: d.title, hint: d.kind, icon: Scale, run: () => { setPalette(false); open({ kind: 'decision', id: d.id }); } })),
       ...db.materials.map((i) => ({ id: i.id, group: '材料', label: i.title, hint: i.channel, icon: FileText, run: () => { setPalette(false); open({ kind: 'material', id: i.id }); } })),
-      ...db.sources.map((s) => ({ id: s.id, group: '接入源', label: `${s.id} ${s.name}`, hint: s.mode, icon: Plug, run: go(`/c/sources/${s.id}`) })),
+      ...db.sources.filter(() => !host).map((s) => ({ id: s.id, group: '接入源', label: `${s.id} ${s.name}`, hint: s.mode, icon: Plug, run: go(`/c/sources/${s.id}`) })),
     ];
-  }, [boards, nav, setPalette, setCapture, open, db]);
+  }, [boards, nav, setPalette, setCapture, open, db, db.actions, db.projects, db.decisions, db.materials]);
 
   const list = useMemo(() => {
     const k = q.trim().toLowerCase();

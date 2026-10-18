@@ -1,3 +1,4 @@
+import { host, preferences } from '../../data/host';
 import { useSyncExternalStore } from 'react';
 import { resolveKind } from '../cards/registry';
 
@@ -99,7 +100,11 @@ export const PRESETS: { id: string; name: string; icon: BoardIcon; desc: string;
 ];
 const fromPreset = (id: string, name?: string, newId?: string): Board => {
   const pr = PRESETS.find((x) => x.id === id)!;
-  return { id: newId ?? pr.id, name: name ?? pr.name, icon: pr.icon, mode: pr.mode, preset: pr.id, cards: structuredClone(pr.cards) };
+  const cards = host && id === 'today' ? [
+    c('today', 0, 0, 6, 9), c('diary', 6, 0, 3, 9), c('quick-note', 9, 0, 3, 9),
+    c('projects', 0, 9, 6, 8), c('decisions', 6, 9, 3, 8), c('inbox', 9, 9, 3, 8),
+  ] : pr.cards;
+  return { id: newId ?? pr.id, name: name ?? pr.name, icon: pr.icon, mode: pr.mode, preset: pr.id, cards: structuredClone(cards) };
 };
 export const DEFAULT_BOARDS: Board[] = PRESETS.map((x) => fromPreset(x.id));
 
@@ -109,8 +114,8 @@ export function migrate(list: Board[]): Board[] {
 }
 function load(): Board[] {
   try {
-    const s = localStorage.getItem(KEY); if (s) return migrate(JSON.parse(s));
-    for (const k of OLD_KEYS) { const o = localStorage.getItem(k); if (o) { const m = migrate(JSON.parse(o)); localStorage.setItem(KEY, JSON.stringify(m)); return m; } }
+    const s = preferences.getItem(KEY); if (s) return migrate(JSON.parse(s));
+    for (const k of OLD_KEYS) { const o = preferences.getItem(k); if (o) { const m = migrate(JSON.parse(o)); preferences.setItem(KEY, JSON.stringify(m)); return m; } }
   } catch { /* ignore */ }
   return structuredClone(DEFAULT_BOARDS);
 }
@@ -124,7 +129,7 @@ const normZ = (b: Board): Board => {
 let boards: Board[] = load().map(normZ);
 const ls = new Set<() => void>();
 const snapshots = new Map<string, Board>();
-function commit(next: Board[]) { boards = next; localStorage.setItem(KEY, JSON.stringify(boards)); ls.forEach((l) => l()); }
+function commit(next: Board[]) { boards = next; preferences.setItem(KEY, JSON.stringify(boards)); ls.forEach((l) => l()); }
 const mapBoard = (id: string, f: (b: Board) => Board) => commit(boards.map((b) => (b.id === id ? f(b) : b)));
 
 export function useBoards(): Board[] {

@@ -11,6 +11,7 @@ import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { FlowSettings, GroupSettings, RouteRules, SubjectPaths } from '../../ui/settings';
 import { resetSettings } from '../../data/settings';
+import { host } from '../../data/host';
 
 function Seg<K extends string>({ id, value, items, onChange }: { id: string; value: K; items: [K, string][]; onChange: (k: K) => void }) {
   return <div className="seg">{items.map(([k, l]) => <button key={k} className={value === k ? 'on' : ''} onClick={() => onChange(k)}>{value === k && <motion.i layoutId={`set-${id}`} className="seg-bg" />}<span>{l}</span></button>)}</div>;
@@ -29,7 +30,11 @@ export default function Settings() {
   const row = (label: string, desc: string, ctl: React.ReactNode) => <div className="set-row"><div><div>{label}</div><div className="small muted">{desc}</div></div>{ctl}</div>;
   return (
     <div className="page" style={{ maxWidth: 820 }}>
-      <PageHeader title="设置" sub="上半部分是流程设置（东西写到哪、一天从几点算起），所有卡片共用；下半部分是界面偏好，只存在本机浏览器。" />
+      <PageHeader title="设置" sub={host ? '当前连接 Obsidian，外观与画板布局保存在本插件配置中。' : '上半部分是流程设置（东西写到哪、一天从几点算起），所有卡片共用；下半部分是界面偏好，只存在本机浏览器。'} />
+      {host ? <Section title="当前知识库" desc={host.vaultName}>
+        <p className="small muted">行动、项目、请求、随手记和日记直接读取原文件。顶栏刷新可读取其他位置的修改，文件路径可打开 Obsidian 原文。</p>
+        <p className="small muted">收件支持查看已有材料并转为行动。AI 整理、采集、设备和健康等卡片待后续接入。</p>
+      </Section> : <>
       <Section title="时间口径与流程去向" id="flow" desc="初处理、自己处理、以后读、日报的结果写到哪">
         <FlowSettings />
       </Section>
@@ -42,6 +47,7 @@ export default function Settings() {
       <Section title="消息分组" id="groups" desc="QQ / 微信群：重要程度与模式（关注 / 钻研 / 只存档）">
         <GroupSettings />
       </Section>
+      </>}
       <Section title="外观">
         {row('主题', '浅色是默认', <Seg id="t" value={p.theme} items={[['light', '浅色'], ['dark', '深色'], ['system', '跟随系统']]} onChange={(theme) => setPrefs({ theme })} />)}
         {row('底色', '「跟随 Obsidian」直接读取 Obsidian 当前主题变量', <div className="seg">{PALETTES.map((x) => <button key={x.id} className={p.palette === x.id ? 'on' : ''} onClick={() => setPrefs({ palette: x.id })}>{p.palette === x.id && <motion.i layoutId="set-pal" className="seg-bg" />}<span>{x.name}</span></button>)}</div>)}
@@ -55,7 +61,7 @@ export default function Settings() {
         {row('标签显示图标', '每块画板可以在「⋯ 管理」里换图标', <Seg id="ic" value={p.boardIcons ? 'y' : 'n'} items={[['y', '显示'], ['n', '不显示']]} onChange={(v) => setPrefs({ boardIcons: v === 'y' })} />)}
         {row('恢复所有默认画板', '只覆盖布局；便签文字、打卡、业务数据都不受影响', <button className="btn sm" onClick={() => { if (confirm('恢复所有默认画板？你调整过的布局会被覆盖。')) { boardStore.resetAll(); toast('已恢复默认画板'); } }}>恢复</button>)}
       </Section>
-      <Section title="样例数据" desc="本轮前端没有接后端：所有业务数据都是样例，按今天的日期生成（相对日期）。">
+      {!host && <><Section title="样例数据" desc="浏览器演示使用合成数据，按今天的日期生成（相对日期）。">
         {row('模拟写入结果', '检验每种写入状态的界面：失败保留输入、不确定提示重新读取、冲突保留草稿', <Seg id="sim" value={sim.write} items={[['ok', '成功'], ['failed', '失败'], ['unknown', '不确定'], ['conflict', '冲突']]} onChange={(write) => store.setSim({ write })} />)}
         {row('本机服务离线', '专注计时、节点监控、浏览器采集、AI 批次等本机命令会送不达', <Seg id="off" value={sim.offline ? 'y' : 'n'} items={[['n', '在线'], ['y', '离线']]} onChange={(v) => store.setSim({ offline: v === 'y' })} />)}
         {row('重置样例数据', '回到初始样例；画板布局不受影响', <button className="btn sm" onClick={() => { store.resetSample(); resetCardStores(); toast('样例数据已重置（共享对象 + 每张卡的私有样例）'); }}>重置</button>)}
@@ -75,7 +81,8 @@ export default function Settings() {
             <div key={k} className="set-row"><div><div className="mono small">{k}</div><div className="small muted">{d}</div></div><div className="small faint" style={{ textAlign: 'right' }}>{w}<br /><span className="mono">{t}</span></div></div>))}
         </div>
       </Section>
-      <Section title="写入回执" id="receipts" count={receipts.length} desc="每一次写入的结果。真实接入后由后端返回；这里是样例。">
+      </>}
+      <Section title="写入回执" id="receipts" count={receipts.length} desc={host ? '本次打开期间的文件写入结果。' : '浏览器演示的模拟写入结果。'}>
         <div className="list receipts">
           {receipts.slice(0, 40).map((r) => (
             <div key={r.id} className="receipt-row">

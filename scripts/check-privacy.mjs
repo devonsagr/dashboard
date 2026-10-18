@@ -2,7 +2,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import { extname, join, relative } from 'node:path';
 
 const root = process.cwd();
-const ignored = new Set(['.git', 'node_modules', 'dist', 'output']);
+const ignored = new Set(['.git', 'node_modules', 'dist', 'output', '.local']);
 const textTypes = new Set(['.ts', '.tsx', '.md', '.mjs', '.json', '.html', '.css', '.svg', '.bat']);
 const findings = [];
 let checked = 0;

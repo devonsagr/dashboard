@@ -21,7 +21,7 @@ export const batches = (): ProcBatch[] => [
   { id: 'pb5', source: 'QQ · 示例通知群', createdAt: at(-2, '21:50'), materialIds: ['m09'], status: 'done', confirmedAt: at(-2, '21:50'), approvalIds: ['ap2', 'ap6'], path: '系统/QQ消息收件箱/批次/qq-b07/处理.md' },
 ];
 
-export const S = cardStore('inbox', () => ({ batches: batches() }));
+export const S = cardStore('inbox', () => ({ batches: batches() }), { live: () => ({ batches: [] }) });
 
 export const createBatch = (ids: string[], source: string) => S.write('batch-new', `新建处理批次（${ids.length} 条）`, () => {
   const id = nid('pb');

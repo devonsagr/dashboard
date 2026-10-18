@@ -6,6 +6,7 @@ import { MaterialRow } from '../../ui/objects';
 import { Empty, MoreLink } from '../../ui/ui';
 import { useWrite, WriteNote } from '../../ui/write';
 import { useOverlay } from '../../workbench/app/overlay';
+import { host } from '../../data/host';
 
 /** 收件流：所有来源的新材料，未读在前 */
 export function InboxStream({ inst }: CardProps) {
@@ -13,7 +14,7 @@ export function InboxStream({ inst }: CardProps) {
   if (!list.length) return <Empty title="收件箱是空的" />;
   return <div className="stack" style={{ gap: 2 }}>{list.slice(0, inst.h > 9 ? 9 : 6).map((m) => <MaterialRow key={m.id} m={m} compact={inst.w < 6} />)}<MoreLink to="/c/inbox" /></div>;
 }
-export const unreadMeta = () => `${store.db.materials.filter((m) => !m.read && !m.archived).length} 未读`;
+export const unreadMeta = () => `${store.db.materials.filter((m) => !m.read && !m.archived).length} ${host ? '条材料' : '未读'}`;
 
 /** 我自己处理（B 路线）：选了自己处理、还没处理完的 */
 export const digestList = (ms: Material[]) => ms.filter((m) => store.undigested(m) && m.route?.kind === '自己处理');

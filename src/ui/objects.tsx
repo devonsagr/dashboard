@@ -12,6 +12,7 @@ import { relDay, relTime, today } from '../data/time';
 import { AiTag, Check2, Chip, SourceChip, Tag } from './ui';
 import { useWrite } from './write';
 import { useOverlay } from '../workbench/app/overlay';
+import { host } from '../data/host';
 
 export const MAIN_TONE: Record<MaterialMain, string> = { 新收到: 'accent', 已读: 'neutral', 已写备注: 'neutral', 'AI 处理中': 'ai', 待我选: 'ai', 自己处理中: 'info', 已消化: 'info', 已推送: 'accent', 已落地: 'ok', 以后读: 'faint', 已归档: 'faint' };
 const AI_LABEL = { none: '', sent: 'AI 处理中', result: 'AI 初处理完', failed: 'AI 失败', unknown: 'AI 状态未知' } as const;
@@ -51,7 +52,7 @@ export function MaterialRow({ m, compact, selected, onSelect }: { m: Material; c
           {!compact && m.ai.state === 'result' && m.ai.suggestion && <span className="ai-hint"><AiTag /> {m.ai.suggestion}</span>}
         </div>
       </div>
-      <Chip tone={MAIN_TONE[main]}>{main}</Chip>
+      <Chip tone={host ? 'neutral' : MAIN_TONE[main]}>{host ? (m.archived ? '已归档' : '已收录') : main}</Chip>
     </motion.div>
   );
 }
